@@ -14,6 +14,7 @@
 
 var currentTilt = null;
 var cursor = null;
+var cursorOffset = 400;
 
 $(document).ready(function()
 {
@@ -42,20 +43,29 @@ $(document).ready(function()
     // -----------------------------------------------
     // phone orientation stuff
 
+    console.log( window.ondevicemotion );
+
     window.ondevicemotion = function( event )
     {
         var x = event.accelerationIncludingGravity.x;
         var y = event.accelerationIncludingGravity.y;
 
-        var tilt = Math.round( x * 10 );
+        var tilt = Math.round( ( x * 50 ) + cursorOffset );
         currentTilt = tilt;
     }
 
     // update the input field every few milliseconds
     window.setInterval( function() {
+
         updateInputField();
-        newMessage( $('#messageform') );
-    } , 1000 );
+
+        // don't update if we're on desktop
+        // TODO : will need a better way to detect if on mobile. but let's get this working!
+        if( currentTilt !== cursorOffset ) {
+            newMessage( $('#messageform') );
+        }
+
+    } , 80 );
 
 });
 
