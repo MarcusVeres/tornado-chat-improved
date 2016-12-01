@@ -13,9 +13,11 @@
 // under the License.
 
 var currentTilt = null;
+var cursor = null;
 
 $(document).ready(function()
 {
+    cursor = document.getElementById( 'cursor' );
 
     if (!window.console) window.console = {};
     if (!window.console.log) window.console.log = function() {};
@@ -67,6 +69,10 @@ function newMessage(form) {
     var disabled = form.find("input[type=submit]");
     disabled.disable();
     $.postJSON("/a/message/new", message, function(response) {
+        
+        console.log( response.body );
+        cursor.style.left = parseInt( response.body );
+
         updater.showMessage(response);
         if (message.id) {
             form.parent().remove();
