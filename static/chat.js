@@ -43,7 +43,7 @@ $(document).ready(function()
     // -----------------------------------------------
     // phone orientation stuff
 
-    console.log( window.ondevicemotion );
+    // console.log( window.ondevicemotion );
 
     window.ondevicemotion = function( event )
     {
@@ -65,7 +65,7 @@ $(document).ready(function()
             newMessage( $('#messageform') );
         }
 
-    } , 80 );
+    } , 50 );
 
 });
 
@@ -79,10 +79,6 @@ function newMessage(form) {
     var disabled = form.find("input[type=submit]");
     disabled.disable();
     $.postJSON("/a/message/new", message, function(response) {
-        
-        console.log( response.body );
-        cursor.style.left = parseInt( response.body );
-
         updater.showMessage(response);
         if (message.id) {
             form.parent().remove();
@@ -166,7 +162,10 @@ var updater = {
         updater.cursor = response.cursor;
         var messages = response.messages;
         updater.cursor = messages[messages.length - 1].id;
-        console.log(messages.length, "new messages, cursor:", updater.cursor);
+
+        // veres
+        // console.log(messages.length, "new messages, cursor:", updater.cursor);
+
         for (var i = 0; i < messages.length; i++) {
             updater.showMessage(messages[i]);
         }
@@ -175,6 +174,13 @@ var updater = {
     showMessage: function(message) {
         var existing = $("#m" + message.id);
         if (existing.length > 0) return;
+
+        // veres
+        // console.log( message.body );
+        cursor.style.left = parseInt( message.body ) + "px";
+
+        return;
+
         var node = $(message.html);
         node.hide();
         $("#inbox").append(node);
