@@ -54,3 +54,12 @@ td {
   float: right;
   z-index: 99;
 }
+
+#cursor {
+    position: absolute;
+    background: red;
+    color: white;
+    padding: 12px;
+    margin: 24px;
+}
+

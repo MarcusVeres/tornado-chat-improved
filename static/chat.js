@@ -12,6 +12,8 @@
 // License for the specific language governing permissions and limitations
 // under the License.
 
+var currentTilt = null;
+
 $(document).ready(function()
 {
 
@@ -34,7 +36,31 @@ $(document).ready(function()
     $("#message").select();
     updater.poll();
 
+
+    // -----------------------------------------------
+    // phone orientation stuff
+
+    window.ondevicemotion = function( event )
+    {
+        var x = event.accelerationIncludingGravity.x;
+        var y = event.accelerationIncludingGravity.y;
+
+        var tilt = Math.round( x * 10 );
+        currentTilt = tilt;
+    }
+
+    // update the input field every few milliseconds
+    window.setInterval( function() {
+        updateInputField();
+        newMessage( $('#messageform') );
+    } , 1000 );
+
 });
+
+function updateInputField()
+{
+    $('#message').val( currentTilt );
+}
 
 function newMessage(form) {
     var message = form.formToDict();
@@ -137,5 +163,8 @@ var updater = {
         node.hide();
         $("#inbox").append(node);
         node.slideDown();
+
+        // mouse settings
+        cursor.style.left = message.html + "px";
     }
 };
