@@ -1,0 +1,13 @@
+
+# swap files
+*.swp
+*.swo
+*.swn
+
+# folders 
+.DS_Store
+venv/
+.sass-cache/
+node_modules/
+bower_components/
+
