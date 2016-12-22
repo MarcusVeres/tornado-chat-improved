@@ -42,6 +42,7 @@
     // data storage
     var keysDown = {};
     var currentTilt = {};
+    var socketTiltData = 0;
 
 
     // draw functions
@@ -143,9 +144,14 @@
 
     Player.prototype.update = function ()
     {
+        this.paddle.move( socketTiltData , 0 );
+        return;
+
+
         // default to the arrow keys if there is no tilt data
         if( !currentTilt.x )
         {
+            return;
             for (var key in keysDown) {
                 var value = Number(key);
                 if (value == 37) {
@@ -161,7 +167,8 @@
         }
 
         // use the motion controls
-        this.paddle.move( parseInt( currentTilt.x ) , 0 );
+        // this.paddle.move( parseInt( currentTilt.x ) , 0 );
+        this.paddle.move( socketTiltData , 0 );
     };
 
 
@@ -226,11 +233,19 @@
 
     MotionController.prototype.update = function()
     {
-        // veres
         console.log( "updating the motion controller" );
-        if( currentTilt.x ){
-            hud.innerHTML = currentTilt.x;
-        } else {
+        if( currentTilt.x )
+        {
+            // veres
+            // hud.innerHTML = currentTilt.x;
+
+            // assign the x value to the message input 
+            $('#message').val( currentTilt.x );
+
+            // send the message to the server 
+            newMessage( $('#messageform') );
+        } 
+        else {
             hud.innerHTML = "no tilt available";
         }
     }
@@ -279,188 +294,158 @@
     };
 
 
-})();
+// })();
 
 
-// -----------------------------------------------------
+    // -----------------------------------------------------
 
-/*
+    //*
 
-var currentTilt = null;
-var cursor = null;
-var cursorOffset = 200;
+    var cursor = null;
 
-var oldTilt = null;
-var newTilt = null;
+    $(document).ready(function()
+    {
+        // cursor = document.getElementById( 'cursor' );
+        // cursor.style.top = "400px";
 
+        if (!window.console) window.console = {};
+        if (!window.console.log) window.console.log = function() {};
 
-$(document).ready(function()
-{
-    cursor = document.getElementById( 'cursor' );
-	cursor.style.top = "400px";
-
-    if (!window.console) window.console = {};
-    if (!window.console.log) window.console.log = function() {};
-
-    $("#messageform").on("submit", function() {
-        newMessage($(this));
-        return false;
-    });
-
-    $("#messageform").on("keypress", function(e) {
-        if (e.keyCode == 13) {
+        $("#messageform").on("submit", function() {
             newMessage($(this));
             return false;
-        }
-        return true;
+        });
+
+        $("#messageform").on("keypress", function(e) {
+            if (e.keyCode == 13) {
+                newMessage($(this));
+                return false;
+            }
+            return true;
+        });
+
+        $("#message").select();
+        updater.poll();
+
     });
 
-    $("#message").select();
-    updater.poll();
-
-
-    // -----------------------------------------------
-    // phone orientation stuff
-
-    // console.log( window.ondevicemotion );
-
-    window.ondevicemotion = function( event )
-    {
-        var x = event.accelerationIncludingGravity.x;
-        var y = event.accelerationIncludingGravity.y;
-        // currentTilt = x;
-        currentTilt = y;
+    function newMessage(form) {
+        var message = form.formToDict();
+        var disabled = form.find("input[type=submit]");
+        disabled.disable();
+        $.postJSON("/a/message/new", message, function(response) {
+            updater.showMessage(response);
+            if (message.id) {
+                form.parent().remove();
+            } else {
+                form.find("input[type=text]").val("").select();
+                disabled.enable();
+            }
+        });
     }
 
-	// veres 
-    // update the input field every few milliseconds
-    window.setInterval( function() {
+    function getCookie(name) {
+        var r = document.cookie.match("\\b" + name + "=([^;]*)\\b");
+        return r ? r[1] : undefined;
+    }
 
-        updateInputField();
+    jQuery.postJSON = function(url, args, callback) {
+        args._xsrf = getCookie("_xsrf");
+        $.ajax({url: url, data: $.param(args), dataType: "text", type: "POST",
+                success: function(response) {
+            if (callback) callback(eval("(" + response + ")"));
+        }, error: function(response) {
+            console.log("ERROR:", response);
+        }});
+    };
 
-        if( currentTilt !== null ) {
-            newMessage( $('#messageform') );
+    jQuery.fn.formToDict = function() {
+        var fields = this.serializeArray();
+        var json = {};
+        for (var i = 0; i < fields.length; i++) {
+            json[fields[i].name] = fields[i].value;
         }
+        if (json.next) delete json.next;
+        return json;
+    };
 
-    } , 50 );
+    jQuery.fn.disable = function() {
+        this.enable(false);
+        return this;
+    };
 
-});
-
-
-function valBetween( v , min , max ) {
-    return ( Math.min( max , Math.max( min , v )));
-}
-
-function updateInputField()
-{
-    $('#message').val( currentTilt );
-}
-
-function newMessage(form) {
-    var message = form.formToDict();
-    var disabled = form.find("input[type=submit]");
-    disabled.disable();
-    $.postJSON("/a/message/new", message, function(response) {
-        updater.showMessage(response);
-        if (message.id) {
-            form.parent().remove();
+    jQuery.fn.enable = function(opt_enable) {
+        if (arguments.length && !opt_enable) {
+            this.attr("disabled", "disabled");
         } else {
-            form.find("input[type=text]").val("").select();
-            disabled.enable();
+            this.removeAttr("disabled");
         }
-    });
-}
+        return this;
+    };
 
-function getCookie(name) {
-    var r = document.cookie.match("\\b" + name + "=([^;]*)\\b");
-    return r ? r[1] : undefined;
-}
+    var updater = {
+        errorSleepTime: 500,
+        cursor: null,
 
-jQuery.postJSON = function(url, args, callback) {
-    args._xsrf = getCookie("_xsrf");
-    $.ajax({url: url, data: $.param(args), dataType: "text", type: "POST",
-            success: function(response) {
-        if (callback) callback(eval("(" + response + ")"));
-    }, error: function(response) {
-        console.log("ERROR:", response);
-    }});
-};
+        poll: function() {
+            var args = {"_xsrf": getCookie("_xsrf")};
+            if (updater.cursor) args.cursor = updater.cursor;
+            $.ajax({
+                url: "/a/message/updates", 
+                type: "POST", 
+                dataType: "text",
+                data: $.param(args), 
+                success: updater.onSuccess,
+                error: updater.onError
+            });
+        },
 
-jQuery.fn.formToDict = function() {
-    var fields = this.serializeArray();
-    var json = {};
-    for (var i = 0; i < fields.length; i++) {
-        json[fields[i].name] = fields[i].value;
-    }
-    if (json.next) delete json.next;
-    return json;
-};
+        onSuccess: function(response) {
+            try {
+                updater.newMessages(eval("(" + response + ")"));
+            } catch (e) {
+                updater.onError();
+                return;
+            }
+            updater.errorSleepTime = 500;
+            window.setTimeout(updater.poll, 0);
+        },
 
-jQuery.fn.disable = function() {
-    this.enable(false);
-    return this;
-};
+        onError: function(response) {
+            updater.errorSleepTime *= 2;
+            console.log("Poll error; sleeping for", updater.errorSleepTime, "ms");
+            window.setTimeout(updater.poll, updater.errorSleepTime);
+        },
 
-jQuery.fn.enable = function(opt_enable) {
-    if (arguments.length && !opt_enable) {
-        this.attr("disabled", "disabled");
-    } else {
-        this.removeAttr("disabled");
-    }
-    return this;
-};
+        newMessages: function(response) {
+            if (!response.messages) return;
+            updater.cursor = response.cursor;
+            var messages = response.messages;
+            updater.cursor = messages[messages.length - 1].id;
 
-var updater = {
-    errorSleepTime: 500,
-    cursor: null,
+            // console.log(messages.length, "new messages, cursor:", updater.cursor);
 
-    poll: function() {
-        var args = {"_xsrf": getCookie("_xsrf")};
-        if (updater.cursor) args.cursor = updater.cursor;
-        $.ajax({url: "/a/message/updates", type: "POST", dataType: "text",
-                data: $.param(args), success: updater.onSuccess,
-                error: updater.onError});
-    },
+            for (var i = 0; i < messages.length; i++) {
+                updater.showMessage(messages[i]);
+            }
+        },
 
-    onSuccess: function(response) {
-        try {
-            updater.newMessages(eval("(" + response + ")"));
-        } catch (e) {
-            updater.onError();
-            return;
+        showMessage: function(message) {
+
+            var val = parseInt( message.body );
+            socketTiltData = val;
+            hud.innerHTML = socketTiltData;
+
+            // veres
+
+            // console.log( val );
+            // var val = parseInt( message.body );
+            // cursor.style.top = (val * -8) + 200 + "px";	
+            // cursor.style.left = (val * -8) + 400 + "px";	
         }
-        updater.errorSleepTime = 500;
-        window.setTimeout(updater.poll, 0);
-    },
+    };
 
-    onError: function(response) {
-        updater.errorSleepTime *= 2;
-        console.log("Poll error; sleeping for", updater.errorSleepTime, "ms");
-        window.setTimeout(updater.poll, updater.errorSleepTime);
-    },
+    //*/
 
-    newMessages: function(response) {
-        if (!response.messages) return;
-        updater.cursor = response.cursor;
-        var messages = response.messages;
-        updater.cursor = messages[messages.length - 1].id;
-
-        // console.log(messages.length, "new messages, cursor:", updater.cursor);
-
-        for (var i = 0; i < messages.length; i++) {
-            updater.showMessage(messages[i]);
-        }
-    },
-
-        // veres
-    showMessage: function(message) {
-
-	var val = parseInt( message.body );
-	// console.log( val );
-        // cursor.style.top = (val * -8) + 200 + "px";	
-        cursor.style.left = (val * -8) + 400 + "px";	
-    }
-};
-
-*/
+})();
 
