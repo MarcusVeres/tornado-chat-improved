@@ -25,10 +25,15 @@ from tornado.concurrent import Future
 from tornado import gen
 from tornado.options import define, options, parse_command_line
 
-define("port", default=8888, help="run on the given port", type=int)
-define("debug", default=False, help="run in debug mode")
+# TODO : pull these out into a config file
+DEFAULT_PORT = 8888
+DEBUG_MODE = True
 
+# set up app properties
+define( "port" , default = DEFAULT_PORT , help = "run on the given port" , type = int )
+define( "debug" , default = DEBUG_MODE , help = "run in debug mode" )
 
+# 
 class MessageBuffer(object):
     def __init__(self):
         self.waiters = set()
@@ -72,11 +77,12 @@ class MessageBuffer(object):
 global_message_buffer = MessageBuffer()
 
 
+#
 class MainHandler(tornado.web.RequestHandler):
     def get(self):
         self.render("index.html", messages=global_message_buffer.cache)
 
-
+#
 class MessageNewHandler(tornado.web.RequestHandler):
     def post(self):
         message = {
@@ -93,7 +99,7 @@ class MessageNewHandler(tornado.web.RequestHandler):
             self.write(message)
         global_message_buffer.new_messages([message])
 
-
+#
 class MessageUpdatesHandler(tornado.web.RequestHandler):
     @gen.coroutine
     def post(self):
@@ -109,24 +115,40 @@ class MessageUpdatesHandler(tornado.web.RequestHandler):
     def on_connection_close(self):
         global_message_buffer.cancel_wait(self.future)
 
-
+#
 def main():
     parse_command_line()
+
+    # configure the app
     app = tornado.web.Application(
+
+        # api endpoints
         [
-            (r"/", MainHandler),
-            (r"/a/message/new", MessageNewHandler),
-            (r"/a/message/updates", MessageUpdatesHandler),
-            ],
-        cookie_secret="__TODO:_GENERATE_YOUR_OWN_RANDOM_VALUE_HERE__",
-        template_path=os.path.join(os.path.dirname(__file__), "templates"),
-        static_path=os.path.join(os.path.dirname(__file__), "static"),
-        xsrf_cookies=True,
-        debug=options.debug,
-        )
-    app.listen(options.port)
+            ( r"/" , MainHandler),
+            ( r"/a/message/new" , MessageNewHandler),
+            ( r"/a/message/updates" , MessageUpdatesHandler),
+        ],
+
+        # dynamic directory names
+        template_path = os.path.join( os.path.dirname( __file__ ) , "templates" ) ,
+        static_path = os.path.join( os.path.dirname( __file__ ) , "static" ) ,
+
+        # don't want randoms submitting the "form" 
+        cookie_secret = "__TODO:_GENERATE_YOUR_OWN_RANDOM_VALUE_HERE__" ,
+        xsrf_cookies = True ,
+
+        # refer to the debug options at the top
+        debug = options.debug ,
+    )
+
+    # assign a port
+    app.listen( options.port )
+
+    # start the app
     tornado.ioloop.IOLoop.current().start()
 
 
+#
 if __name__ == "__main__":
     main()
+
