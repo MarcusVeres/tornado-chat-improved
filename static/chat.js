@@ -14,11 +14,16 @@
 
 var currentTilt = null;
 var cursor = null;
-var cursorOffset = 400;
+var cursorOffset = 200;
+
+var oldTilt = null;
+var newTilt = null;
+
 
 $(document).ready(function()
 {
     cursor = document.getElementById( 'cursor' );
+	cursor.style.top = "400px";
 
     if (!window.console) window.console = {};
     if (!window.console.log) window.console.log = function() {};
@@ -49,25 +54,28 @@ $(document).ready(function()
     {
         var x = event.accelerationIncludingGravity.x;
         var y = event.accelerationIncludingGravity.y;
-
-        var tilt = Math.round( ( x * 50 ) + cursorOffset );
-        currentTilt = tilt;
+        // currentTilt = x;
+        currentTilt = y;
     }
 
+	// veres 
     // update the input field every few milliseconds
     window.setInterval( function() {
 
         updateInputField();
 
-        // don't update if we're on desktop
-        // TODO : will need a better way to detect if on mobile. but let's get this working!
-        if( currentTilt !== cursorOffset ) {
+        if( currentTilt !== null ) {
             newMessage( $('#messageform') );
         }
 
     } , 50 );
 
 });
+
+
+function valBetween( v , min , max ) {
+    return ( Math.min( max , Math.max( min , v )));
+}
 
 function updateInputField()
 {
@@ -163,7 +171,6 @@ var updater = {
         var messages = response.messages;
         updater.cursor = messages[messages.length - 1].id;
 
-        // veres
         // console.log(messages.length, "new messages, cursor:", updater.cursor);
 
         for (var i = 0; i < messages.length; i++) {
@@ -171,13 +178,39 @@ var updater = {
         }
     },
 
+        // veres
     showMessage: function(message) {
+
+	var val = parseInt( message.body );
+	// console.log( val );
+        // cursor.style.top = (val * -8) + 200 + "px";	
+        cursor.style.left = (val * -8) + 400 + "px";	
+
+	return;
+
         var existing = $("#m" + message.id);
         if (existing.length > 0) return;
 
-        // veres
+	var val = parseInt( message.body );
+	var change = null;
+
+	// store the old value
+	oldTilt = newTilt;
+
+	// update the tilt
+	newTilt = val;
+
+	console.log( newTilt );
+
+	return;
+		
+	// get current top
+	var currentOffset = cursor.style.top.replace( "px" , "" );
+	currentOffset = parseInt( currentOffset );
+	currentOffset += change;
+
         // console.log( message.body );
-        cursor.style.left = parseInt( message.body ) + "px";
+        cursor.style.top = currentOffset + "px";
 
         return;
 

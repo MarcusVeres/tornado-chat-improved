@@ -57,9 +57,11 @@ td {
 
 #cursor {
     position: absolute;
-    background: red;
-    color: white;
-    padding: 12px;
-    margin: 24px;
+    height: 128px;
+    width: 128px;
+    background-image: url('airplane.png');
+    background-size: 100% 100%;
+    top: 150;
+    left: 400;
 }
 
