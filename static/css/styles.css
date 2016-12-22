@@ -65,3 +65,10 @@ td {
     left: 400;
 }
 
+
+.qr-wrapper {
+    position: absolute;
+    right: 20px;
+    top: 0;
+}
+

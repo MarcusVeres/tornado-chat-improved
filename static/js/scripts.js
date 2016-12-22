@@ -233,7 +233,7 @@
 
     MotionController.prototype.update = function()
     {
-        console.log( "updating the motion controller" );
+        // console.log( "updating the motion controller" );
         if( currentTilt.x )
         {
             // veres
@@ -293,13 +293,9 @@
         currentTilt = { 'x' : x , 'y' : y };
     };
 
-
-// })();
-
-
+    // sockets functions 
+    // everything below this line is not as clean as the stuff above it
     // -----------------------------------------------------
-
-    //*
 
     var cursor = null;
 
@@ -445,7 +441,28 @@
         }
     };
 
-    //*/
+
+    // -----------------------------------------------------
+    // QR shortcut code stuff
+
+    // var localAddress = "localhost:8888";
+    // var networkAddress = "192.168.0.157:8888";
+    // var localUrl = window.location.href;
+    // var networkUrl = localUrl.replace( localAddress , networkAddress );
+    // var destinationUrl = networkUrl;
+
+    // manual overwrite ghetto edition:
+    var destinationUrl = "http://192.168.0.157:8888";
+    console.log( destinationUrl );
+
+    var qrcode = new QRCode( "qrcode" , {
+        text: destinationUrl ,
+        width: 128 ,
+        height: 128 ,
+        colorDark : "#000000" ,
+        colorLight : "#ffffff" ,
+        correctLevel : QRCode.CorrectLevel.H
+    });
 
 })();
 
