@@ -13,28 +13,35 @@
     };
 
     // settings
-    var canvasWidth = 400;
-    var canvasHeight = 600;
+    var canvasWidth = 300;
+    var canvasHeight = 450;
     var backgroundColor = '#1e75bb';
+
     var paddleColor = '#ffffff';
-    var paddleHeight = 16;
-    var paddleWidth = 110;
+    var paddleHeight = 10;
+    var paddleWidth = 72;
+    var paddleMoveSpeed = 4;
+
     var ballColor = '#ffd700';
     var ballRadius = 10;
+
 
     var canvas = document.createElement("canvas");
     canvas.width = canvasWidth;
     canvas.height = canvasHeight;
 
     var context = canvas.getContext( '2d' );
+    var hud = document.getElementById( 'hud' );
 
     // initialize objects
     var player = new Player();
     var computer = new Computer();
-    var ball = new Ball( 200 , 300 );
+    var ball = new Ball( canvasWidth/2 , canvasHeight/2 );
+    var motion = new MotionController();
 
     // data storage
     var keysDown = {};
+    var currentTilt = {};
 
 
     // draw functions
@@ -48,6 +55,7 @@
     };
 
     var update = function () {
+        motion.update();
         player.update();
         computer.update( ball );
         ball.update( player.paddle , computer.paddle );
@@ -82,8 +90,8 @@
         if (this.x < 0) {
             this.x = 0;
             this.x_speed = 0;
-        } else if (this.x + this.width > 400) {
-            this.x = 400 - this.width;
+        } else if (this.x + this.width > canvasWidth) {
+            this.x = canvasWidth - this.width;
             this.x_speed = 0;
         }
     };
@@ -106,16 +114,16 @@
     Computer.prototype.update = function (ball) {
         var x_pos = ball.x;
         var diff = -((this.paddle.x + (this.paddle.width / 2)) - x_pos);
-        if (diff < 0 && diff < -4) {
-            diff = -5;
-        } else if (diff > 0 && diff > 4) {
-            diff = 5;
+        if (diff < 0 && diff < -paddleMoveSpeed) {
+            diff = -1; // -paddleMoveSpeed;
+        } else if (diff > 0 && diff > paddleMoveSpeed) {
+            diff = 1; //paddleMoveSpeed;
         }
         this.paddle.move(diff, 0);
         if (this.paddle.x < 0) {
             this.paddle.x = 0;
-        } else if (this.paddle.x + this.paddle.width > 400) {
-            this.paddle.x = 400 - this.paddle.width;
+        } else if (this.paddle.x + this.paddle.width > canvasWidth ) {
+            this.paddle.x = canvasWidth - this.paddle.width;
         }
     };
 
@@ -133,17 +141,27 @@
         this.paddle.render();
     };
 
-    Player.prototype.update = function () {
-        for (var key in keysDown) {
-            var value = Number(key);
-            if (value == 37) {
-                this.paddle.move(-4, 0);
-            } else if (value == 39) {
-                this.paddle.move(4, 0);
-            } else {
-                this.paddle.move(0, 0);
+    Player.prototype.update = function ()
+    {
+        // default to the arrow keys if there is no tilt data
+        if( !currentTilt.x )
+        {
+            for (var key in keysDown) {
+                var value = Number(key);
+                if (value == 37) {
+                    this.paddle.move(-paddleMoveSpeed, 0);
+                } else if (value == 39) {
+                    this.paddle.move(paddleMoveSpeed, 0);
+                } else {
+                    this.paddle.move(0, 0);
+                }
             }
+            // don't execute the tilt code
+            return;
         }
+
+        // use the motion controls
+        this.paddle.move( parseInt( currentTilt.x ) , 0 );
     };
 
 
@@ -164,27 +182,27 @@
     Ball.prototype.update = function ( paddle1 , paddle2 ) {
         this.x += this.x_speed;
         this.y += this.y_speed;
-        var top_x = this.x - 5;
-        var top_y = this.y - 5;
-        var bottom_x = this.x + 5;
-        var bottom_y = this.y + 5;
+        var top_x = this.x - ballRadius;
+        var top_y = this.y - ballRadius;
+        var bottom_x = this.x + ballRadius;
+        var bottom_y = this.y + ballRadius;
 
-        if (this.x - 5 < 0) {
-            this.x = 5;
+        if (this.x - ballRadius < 0) {
+            this.x = ballRadius;
             this.x_speed = -this.x_speed;
-        } else if (this.x + 5 > 400) {
-            this.x = 395;
+        } else if (this.x + ballRadius > canvasWidth) {
+            this.x = canvasWidth - ballRadius;
             this.x_speed = -this.x_speed;
         }
 
-        if (this.y < 0 || this.y > 600) {
+        if (this.y < 0 || this.y > canvasHeight) {
             this.x_speed = 0;
             this.y_speed = 3;
-            this.x = 200;
-            this.y = 300;
+            this.x = canvasWidth/2;
+            this.y = canvasHeight/2;
         }
 
-        if (top_y > 300) {
+        if (top_y > canvasHeight/2) {
             if (top_y < (paddle1.y + paddle1.height) && bottom_y > paddle1.y && top_x < (paddle1.x + paddle1.width) && bottom_x > paddle1.x) {
                 this.y_speed = -3;
                 this.x_speed += (paddle1.x_speed / 2);
@@ -199,6 +217,48 @@
         }
     };
 
+    
+    function MotionController()
+    {
+        this.x;
+        this.y;
+    }
+
+    MotionController.prototype.update = function()
+    {
+        // veres
+        console.log( "updating the motion controller" );
+        if( currentTilt.x ){
+            hud.innerHTML = currentTilt.x;
+        } else {
+            hud.innerHTML = "no tilt available";
+        }
+    }
+
+
+    // 
+
+    // Returns a function, that, as long as it continues to be invoked, will not
+    // be triggered. The function will be called after it stops being called for
+    // N milliseconds. If `immediate` is passed, trigger the function on the
+    // leading edge, instead of the trailing.
+    function debounce(func, wait, immediate) {
+        var timeout;
+        return function() {
+            var context = this, args = arguments;
+            var later = function() {
+                timeout = null;
+                if (!immediate) func.apply(context, args);
+            };
+            var callNow = immediate && !timeout;
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+            if (callNow) func.apply(context, args);
+        };
+    };
+
+
+    // 
 
     document.body.appendChild(canvas);
     animate(step);
@@ -210,6 +270,14 @@
     window.addEventListener("keyup", function (event) {
         delete keysDown[event.keyCode];
     });
+
+    window.ondevicemotion = function( event )
+    {
+        var x = event.accelerationIncludingGravity.x;
+        var y = event.accelerationIncludingGravity.y;
+        currentTilt = { 'x' : x , 'y' : y };
+    };
+
 
 })();
 
