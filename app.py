@@ -115,6 +115,58 @@ class MessageUpdatesHandler(tornado.web.RequestHandler):
     def on_connection_close(self):
         global_message_buffer.cancel_wait(self.future)
 
+
+# --------------------------------------------------------
+# 2-Player functions
+# this is a little ghetto, but we're prototyping :)
+
+class TwoPlayerHost(tornado.web.RequestHandler):
+    def get(self):
+        self.render("2-player-host.html", messages=global_message_buffer.cache)
+
+class PlayerOne(tornado.web.RequestHandler):
+    def get(self):
+        self.render("player-1.html", messages=global_message_buffer.cache)
+
+class PlayerTwo(tornado.web.RequestHandler):
+    def get(self):
+        self.render("player-2.html", messages=global_message_buffer.cache)
+
+class MessageNewPlayerOne(tornado.web.RequestHandler):
+    def post(self):
+        message = {
+            "id": str(uuid.uuid4()),
+            "body": self.get_argument("body"),
+            "player": 1,
+        }
+        # to_basestring is necessary for Python 3's json encoder,
+        # which doesn't accept byte strings.
+        message["html"] = tornado.escape.to_basestring(
+            self.render_string("message.html", message=message))
+        if self.get_argument("next", None):
+            self.redirect(self.get_argument("next"))
+        else:
+            self.write(message)
+        global_message_buffer.new_messages([message])
+
+class MessageNewPlayerTwo(tornado.web.RequestHandler):
+    def post(self):
+        message = {
+            "id": str(uuid.uuid4()),
+            "body": self.get_argument("body"),
+            "player": 2,
+        }
+        # to_basestring is necessary for Python 3's json encoder,
+        # which doesn't accept byte strings.
+        message["html"] = tornado.escape.to_basestring(
+            self.render_string("message.html", message=message))
+        if self.get_argument("next", None):
+            self.redirect(self.get_argument("next"))
+        else:
+            self.write(message)
+        global_message_buffer.new_messages([message])
+
+# --------------------------------------------------------
 #
 def main():
     parse_command_line()
@@ -127,6 +179,11 @@ def main():
             ( r"/" , MainHandler),
             ( r"/a/message/new" , MessageNewHandler),
             ( r"/a/message/updates" , MessageUpdatesHandler),
+            ( r"/2-player-host" , TwoPlayerHost),
+            ( r"/player-1" , PlayerOne),
+            ( r"/player-2" , PlayerTwo),
+            ( r"/a/message/new-p1" , MessageNewPlayerOne),
+            ( r"/a/message/new-p2" , MessageNewPlayerTwo),
         ],
 
         # dynamic directory names
